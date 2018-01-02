@@ -26,3 +26,4 @@ Pass an optional params object to the constructor with the following keys:
 * `labelClass`
 * `validator`
 * `textPattern`
+* `historyName`

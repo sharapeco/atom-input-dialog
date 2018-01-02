@@ -7,9 +7,15 @@ const defaultValidator = (text) => {
   return null;
 };
 
+const storageNamePrefix = "atom-input-dialog:";
+
 module.exports = class InputDialog {
   constructor(options = {}) {
     this.callback = options.callback;
+
+    this.historyName = options.historyName;
+    this.history = this.loadHistory();
+    this.historyIndex = this.history.length;
 
     this.miniEditor = this.buildMiniEditor(options);
     this.message = this.buildMessage(options);
@@ -24,6 +30,8 @@ module.exports = class InputDialog {
     });
 
     atom.commands.add(this.element, {
+      "core:move-up": this.prevHistory.bind(this),
+      "core:move-down": this.nextHistory.bind(this),
       'core:confirm': this.confirm.bind(this),
       'core:cancel': this.close.bind(this),
     });
@@ -44,6 +52,7 @@ module.exports = class InputDialog {
       return;
     }
 
+    this.saveHistory(text);
     if (this.callback) {
       this.callback(text);
     }
@@ -125,5 +134,54 @@ module.exports = class InputDialog {
     element.appendChild(this.message);
 
     return element;
+  }
+
+  loadHistory() {
+    if (this.historyName == undefined) {
+      return [];
+    }
+    var items = localStorage.getItem(storageNamePrefix + this.historyName);
+    if (!items) {
+      return [];
+    }
+    items = JSON.parse(items);
+    if (!Array.isArray(items)) {
+      return [];
+    }
+    return items;
+  }
+
+  saveHistory(newItem) {
+    if (this.historyName == undefined) {
+      return;
+    }
+    var newHistory = [newItem];
+    var existItem = {};
+    existItem[newItem] = true;
+    for (var i = this.history.length - 1; i >= 0; i--) {
+      if (!existItem[this.history[i]]) {
+        newHistory.unshift(this.history[i]);
+        existItem[this.history[i]] = true;
+      }
+    }
+    localStorage.setItem(storageNamePrefix + this.historyName, JSON.stringify(newHistory));
+  }
+
+  prevHistory() {
+    var index = this.historyIndex - 1;
+    if (index < 0) {
+      index = 0;
+    }
+    this.historyIndex = index;
+    this.miniEditor.setText((index < this.history.length) ? this.history[index] : "");
+  }
+
+  nextHistory() {
+    var index = this.historyIndex + 1;
+    if (index > this.history.length) {
+      index = this.history.length;
+    }
+    this.historyIndex = index;
+    this.miniEditor.setText((index < this.history.length) ? this.history[index] : "");
   }
 };
